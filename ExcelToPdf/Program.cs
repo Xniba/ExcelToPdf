@@ -5,7 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 
-
+//NuGet
 using Microsoft.Office.Interop.Excel;
 
 namespace ExcelToPdf
@@ -15,77 +15,44 @@ namespace ExcelToPdf
         static void Main(string[] args)
         {
             ////Parameters////
-            string directoryPath = GetPathToDirectory() + @"\Files";              //existing direcroty
-            string directoryPathExcel = directoryPath + @"\Excel";              //existing directory witch excel, to convert
-            string newDirectoryPathPdf = directoryPath + @"\Pdf";                //new directory for PDFs
-            string newDirectoryPathPdfSigned = directoryPath + @"\PdfSigned";    //new directory for signed PDFs 
-
-            //List of names, excel and future pdf files
-            string[] excelList;     //array of excel name and path
-            string[] pdfList;       //array of pdf name and paths
-            string[] pdfSignedList; //array of pdf name and paths
-
-            // number of files to convert
-            int amountOfFiles = 0;
-
-            excelList = new string[] { @"C:\Users\Adrian\Desktop\Testy\Files\BaseFiles\CA001 - ReplacementFile.xlsx" };
-            pdfList = new string[] { @"C:\Users\Adrian\Desktop\Testy\Files\BaseFiles\CA001 - ReplacementFile.pdf" };
-            amountOfFiles = 1;
-            ExcelToPdf(excelList, pdfList, amountOfFiles);
-            return;
-
-            ////Program////
-            // 1. Create new directory for PDF
+            string directoryPathFiles = GetPathToDirectory("Files");
+            string directoryPathExcel = directoryPathFiles + @"\ExcelFiles";
+            string newDirectoryPathPdf = directoryPathFiles + @"\PdfFiles";
+ 
             CreateNewDirectory(newDirectoryPathPdf);
 
-            // 2.1. Read excel files name from directory
-            excelList = ReadNamesOfExcels(directoryPathExcel);
+            string[] excelList = ReadNamesOfExcels(directoryPathExcel);
+            string[] pdfList = NamesExcelsToPdf(excelList, newDirectoryPathPdf);
 
-            // 2.1.1.
-            amountOfFiles = excelList.Count();
-            Console.WriteLine($"Amount found files: {amountOfFiles}");
+            ExcelToPdf(excelList, pdfList);
 
-            // 2.2. Prepare pdf file name (path)
-            pdfList = NamesExcelsToPdf(excelList, newDirectoryPathPdf);
-
-            // 4. Creating from excel new PDFs, in new directory 
-            ExcelToPdf(excelList, pdfList, amountOfFiles);
+            Console.WriteLine("\n"+"All finished, to close app press any key");
+            Console.ReadKey();
 
             return;
         }
         static string[] ReadNamesOfExcels(string directoryPath)
         {
-            // 0. Variable
-            Queue<string> callerIds = new Queue<string>();  //Queue for later sort
-            int i;                                          //variable for loop
-            bool change = false;
-
-            // 1. Read all files with ".xlsx" extension
-            string[] list = Directory.GetFiles(directoryPath, "*.xlsx");
-
-            // 2. Check all readed files, if ther is file started on "~" (thats mean instance of open file) don't save it in queue
-            for (i = 0; i < list.Count(); i++)
+            string[] excelNamesList = new string[0];
+            try
             {
-                //list[i][0]; - its mean, first (index 0) chart in string list[i]
-                if (list[i][0] != '~')
-                { callerIds.Enqueue(list[i]); } //Add to queue variable form array 
-                else
-                { change = true; }
+                excelNamesList = Directory.GetFiles(directoryPath, "*.xlsx");
+            }
+            catch 
+            { 
+                CloseApp();
             }
 
-            // 3. If in step-2 find instance file, make below
-            if (change)
-            {
-                list = new string[callerIds.Count()];   //resize array
-                i = 0;                                  //reset loop counter
-                foreach (var id in callerIds)           //Rewrite array
+            Queue<string> excelNamesQueue = new Queue<string>();
+            for (int i = 0; i < excelNamesList.Length; i++)
+            { 
+                if (excelNamesList[i][0] != '~')
                 {
-                    list[i] = id;
-                    i++;
+                    excelNamesQueue.Enqueue(excelNamesList[i]); 
                 }
             }
 
-            return list;
+            return excelNamesQueue.ToArray();
         }
         static string[] NamesExcelsToPdf(string[] excelList, string newDirectoryPath)
         {
@@ -128,38 +95,38 @@ namespace ExcelToPdf
                 System.Environment.Exit(0);
             }
         }
-        static void ExcelToPdf(string[] excelList, string[] pdfList, int amountOfFiles)
+        static void ExcelToPdf(string[] excelList, string[] pdfList)
         {
-            //Parameters
-            //Create Excel App instance
-            Application excelApp = new Application();
-            Workbook wb;
-            Workbook wb2;
-            Worksheet ws;
+            int amountOfFiles = excelList.Length;
+            Console.WriteLine($"Amount found files: {amountOfFiles}");
 
-            Console.WriteLine("\nConversion of files from .xlsx to .pdf has started");
+            Application excelApp = new Application();
+            Workbook workbook_1;
+            Workbook workbook_2;
+            Worksheet worksheet;
+
+            Console.WriteLine("\nConversion of files from .xlsx to .pdf has started"+ "\n");
             // 1. Create new pdf from excel
             for (int i = 0; i < amountOfFiles; i++)
             {
                 // 1.1 Open workbook from file path
-                wb = excelApp.Workbooks.Open(excelList[i]);
+                workbook_1 = excelApp.Workbooks.Open(excelList[i]);
 
                 // 1.2. Open from workbook one worksheet, thats one with we want to save 
-                ws = (Worksheet)wb.Sheets[2]; //wb.Sheets[2].Name, return name of 2nd worksheet. Is counted from one(1)
-                                              //ws = (Worksheet)wb.Sheets[2]; //////////////////////////try this
+                worksheet = (Worksheet)workbook_1.Sheets[2];
 
                 // 1.3. Create second workboook from instance of excel
-                wb2 = excelApp.Workbooks.Add();
+                workbook_2 = excelApp.Workbooks.Add();
 
                 // 1.4. Copy worksheets from first workbook to secound wborkbook in first worksheets (wb2.Sheets[1])
-                ws.Copy(wb2.Sheets[1]);
+                worksheet.Copy(workbook_2.Sheets[1]);
 
                 // 1.5. Save new workbook as a PDF file
-                wb2.ExportAsFixedFormat(XlFixedFormatType.xlTypePDF, pdfList[i]);
+                workbook_2.ExportAsFixedFormat(XlFixedFormatType.xlTypePDF, pdfList[i]);
 
                 // 1.6. Close instance
-                wb.Close(0);
-                wb2.Close(0);
+                workbook_1.Close(0);
+                workbook_2.Close(0);
 
                 // 1.7. Info:
                 Console.WriteLine("File {0} saved: {1}", i + 1, pdfList[i].Substring(pdfList[i].LastIndexOf(@"\") + 1, 6));
@@ -167,7 +134,7 @@ namespace ExcelToPdf
 
             // 1.7. Info:
 
-            Console.WriteLine("All files converted, saved in directory:");
+            Console.WriteLine("\n" + "All files converted, saved in directory:");
             Console.WriteLine(pdfList[0].Substring(0, pdfList[0].LastIndexOf(@"\")));
 
             // 1.8. Close 
