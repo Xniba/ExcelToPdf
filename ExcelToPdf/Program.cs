@@ -5,7 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 
-//dodać nugetsa
+
 using Microsoft.Office.Interop.Excel;
 
 namespace ExcelToPdf
