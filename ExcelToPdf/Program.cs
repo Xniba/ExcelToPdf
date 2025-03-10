@@ -12,8 +12,52 @@ namespace ExcelToPdf
 {
     internal class Program
     {
+
+        static void Test_ExcelToPdf()
+        {
+            string excelFile = "C:\\Users\\plradbad\\source\\repos\\Xniba\\ExcelToPdf\\ExcelToPdf\\Files\\ExcelFiles\\CA001 - ReplacementFile.xlsx";
+            string pfdFile = "C:\\Users\\plradbad\\source\\repos\\Xniba\\ExcelToPdf\\ExcelToPdf\\Files\\PdfFiles\\CA001 - ReplacementFile.pdf";
+
+
+            Application excelApp = new Application();
+            Workbook workbook_1;
+            Workbook workbook_2;
+            Worksheet worksheet;
+
+            // 1.1 Open workbook from file path
+            workbook_1 = excelApp.Workbooks.Open(excelFile);
+
+            // 1.2. Open from workbook one worksheet, thats one with we want to save 
+            worksheet = (Worksheet)workbook_1.Sheets[2];
+
+            // 1.3. Create second workboook from instance of excel
+            workbook_2 = excelApp.Workbooks.Add();
+
+            // 1.4. Copy worksheets from first workbook to secound wborkbook in first worksheets (wb2.Sheets[1])
+            worksheet.Copy(workbook_2.Sheets[1]);
+
+            // 1.5. Save new workbook as a PDF file
+            workbook_2.ExportAsFixedFormat(XlFixedFormatType.xlTypePDF, pfdFile);
+
+            // 1.6. Close instance
+            workbook_1.Close(0);
+            workbook_2.Close(0);
+
+            // 1.7. Info:
+
+            Console.WriteLine("\n" + "All files converted, saved in directory:");
+            Console.WriteLine("lokalizacja pliku");
+
+            // 1.8. Close 
+            excelApp.Quit();
+
+            return;
+        }
         static void Main(string[] args)
         {
+
+            Test_ExcelToPdf();
+            return;
             ////Parameters////
             string directoryPathFiles = GetPathToDirectory("Files");
             string directoryPathExcel = directoryPathFiles + @"\ExcelFiles";
@@ -100,12 +144,11 @@ namespace ExcelToPdf
         }
         static void CreateNewDirectory(string newDirectoryPath)
         {
-            //New directory for files
             try
             {
                 if (Directory.Exists(newDirectoryPath))
                 {
-                    Directory.Delete(newDirectoryPath, true); //true, give permision to delete directory and all content
+                    Directory.Delete(newDirectoryPath, true);
                     Directory.CreateDirectory(newDirectoryPath);
                 }
                 else
@@ -113,16 +156,21 @@ namespace ExcelToPdf
                     Directory.CreateDirectory(newDirectoryPath);
                 }
             }
+            catch (UnauthorizedAccessException)
+            {
+                Debug.WriteLine("Catch in CreateNewDirectory -> UnauthorizedAccessException");
+
+                Console.WriteLine("No permition to delete directory:\n" + newDirectoryPath);
+                CloseApp();
+            }
             catch
             {
                 Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine("Can't delete or create new directory");
-                Console.WriteLine($"Close all files from directory: {newDirectoryPath}");
-                Console.WriteLine($"Or give permission to write in: {newDirectoryPath.Substring(0, 35 - 10)}");
-                Console.WriteLine("\nPress any key to close window");
+                Console.WriteLine($"Close all files from directory:\n" + newDirectoryPath);
                 Console.ResetColor();
-                Console.ReadKey();
-                System.Environment.Exit(0);
+
+                CloseApp();
             }
         }
         static void ExcelToPdf(string[] excelList, string[] pdfList)
@@ -135,7 +183,7 @@ namespace ExcelToPdf
             Workbook workbook_2;
             Worksheet worksheet;
 
-            Console.WriteLine("\nConversion of files from .xlsx to .pdf has started"+ "\n");
+            Console.WriteLine("\nConverting files in progres"+ "\n");
             // 1. Create new pdf from excel
             for (int i = 0; i < amountOfFiles; i++)
             {
