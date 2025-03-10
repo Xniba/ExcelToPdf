@@ -21,8 +21,8 @@ namespace ExcelToPdf
  
             CreateNewDirectory(newDirectoryPathPdf);
 
-            string[] excelList = ReadNamesOfExcels(directoryPathExcel);
-            string[] pdfList = NamesExcelsToPdf(excelList, newDirectoryPathPdf);
+            string[] excelList = ReadNameOfExcelFiles(directoryPathExcel);
+            string[] pdfList = PreparePathForFilesToNewDirectoryWithChangedExtension(excelList, newDirectoryPathPdf, ".xlsx", ".pdf");
 
             ExcelToPdf(excelList, pdfList);
 
@@ -31,7 +31,7 @@ namespace ExcelToPdf
 
             return;
         }
-        static string[] ReadNamesOfExcels(string directoryPath)
+        static string[] ReadNameOfExcelFiles(string directoryPath)
         {
             string[] excelNamesList = new string[0];
             try
@@ -54,18 +54,48 @@ namespace ExcelToPdf
 
             return excelNamesQueue.ToArray();
         }
-        static string[] NamesExcelsToPdf(string[] excelList, string newDirectoryPath)
+        static string[] PreparePathForFilesToNewDirecotryFromExcelFilesToPdfFiles(string[] excelList, string newDirectoryPath)
         {
-            string[] pdfList = new string[excelList.Count()];
+            string[] pdfList = new string[excelList.Length];
 
-            // 1. Read names of Excel files and prepare names for PDF 
-            int i = 0;
-            foreach (string excel in excelList)
+            try
             {
-                pdfList[i] = excelList[i].Substring(excelList[i].LastIndexOf(@"\"));
-                pdfList[i] = newDirectoryPath + pdfList[i].Replace(".xlsx", ".pdf");
-                i++;
+                for (int i = 0; i < excelList.Length; i++)
+                {
+                    pdfList[i] = newDirectoryPath +  
+                    excelList[i]
+                    .Substring(excelList[i].LastIndexOf(@"\"))
+                    .Replace(".xlsx", ".pdf");
+                    
+                }
             }
+            catch
+            {
+                CloseApp();
+            }
+
+            return pdfList;
+        }
+        static string[] PreparePathForFilesToNewDirectoryWithChangedExtension(string[] excelList, string newDirectoryPath, string orginalExtension, string newExtension)
+        {
+            string[] pdfList = new string[excelList.Length];
+
+            try
+            {
+                for (int i = 0; i < excelList.Length; i++)
+                {
+                    pdfList[i] = newDirectoryPath +
+                    excelList[i]
+                    .Substring(excelList[i].LastIndexOf(@"\"))
+                    .Replace(orginalExtension, newExtension);
+
+                }
+            }
+            catch
+            {
+                CloseApp();
+            }
+
             return pdfList;
         }
         static void CreateNewDirectory(string newDirectoryPath)
