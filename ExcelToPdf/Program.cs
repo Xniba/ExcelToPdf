@@ -2,11 +2,8 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
-using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-
 
 //NuGet
 using Microsoft.Office.Interop.Excel;
@@ -18,10 +15,10 @@ namespace ExcelToPdf
         static void Main(string[] args)
         {
             ////Parameters////
-            string directoryPathFiles = GetPathToDirectory("Files");
-            string baseDirectoryPath = directoryPathFiles + @"\BaseFiles";
-            string newDirectoryPath = directoryPathFiles + @"\NewFiles";
- 
+            string directoryPath = GetPathToDirectory("Files");
+            string baseDirectoryPath = directoryPath + @"\BaseFiles";
+            string newDirectoryPath = directoryPath + @"\NewFiles";
+
             CreateNewDirectory(newDirectoryPath);
 
             string[] excelList = ReturnPathForFilesWithExtensionFromDirectory(baseDirectoryPath, ".xlsx");
@@ -29,7 +26,7 @@ namespace ExcelToPdf
 
             ExcelToPdf(excelList, pdfList);
 
-            Console.WriteLine("\n"+"All finished, to close app press any key");
+            Console.WriteLine("\n"+"All finished correctly, to close app press any key");
             Console.ReadKey();
 
             return;
@@ -37,8 +34,7 @@ namespace ExcelToPdf
         static string[] ReturnPathForFilesWithExtensionFromDirectory(string directoryPath, string fileExtension)
         {
             Queue<string> excelFilesQueue = new Queue<string>();
-            string[] excelFilesList = null;
-
+            string[] excelFilesList = new string[0];
 
             if ('.' != fileExtension[0])
             {
@@ -47,12 +43,7 @@ namespace ExcelToPdf
 
             try
             {
-                Console.WriteLine("\ntest");
-                Console.WriteLine(directoryPath);
-                Console.WriteLine(fileExtension);
-                Console.WriteLine("test\n");
-
-                excelFilesList = Directory.GetFiles(directoryPath, fileExtension);
+                excelFilesList = Directory.GetFiles(directoryPath, "*"+fileExtension);
                 if (0 == excelFilesList.Length)
                 {
                     Console.WriteLine($"\nNo files with extension: '{fileExtension}' in directory:\n" + directoryPath);
@@ -72,7 +63,6 @@ namespace ExcelToPdf
             {
                 if ('~' != excelFilesList[i].Substring(excelFilesList[i].LastIndexOf(@"\")+1 )[0])
                 {
-                    Console.WriteLine(excelFilesList[i]);
                     excelFilesQueue.Enqueue(excelFilesList[i]);
                 }
                 else
@@ -92,26 +82,25 @@ namespace ExcelToPdf
         }
         static string[] PreparePathForFilesInNewDirectory(string[] excelList, string newDirectoryPath, string newFileExtension)
         {
+            if ('.' != newFileExtension[0])
+            {
+                newFileExtension = '.' + newFileExtension;
+            }
 
             string[] pdfList = new string[excelList.Length];
-
             try
             {
-                string fileExtension = excelList[0].Substring(excelList[0].LastIndexOf(@".") + 1);
-                //string fileExtension = excelList[0].Substring(excelList[0].LastIndexOf(@".")+1);
-                Console.WriteLine(fileExtension);
+                string fileExtension = excelList[0].Substring(excelList[0].LastIndexOf(@"."));
                 for (int i = 0; i < excelList.Length; i++)
                 {
                     pdfList[i] = newDirectoryPath +  
                     excelList[i]
                     .Substring(excelList[i].LastIndexOf(@"\"))
                     .Replace(fileExtension, newFileExtension);
-                    
                 }
             }
             catch
             {
-
                 Console.WriteLine("\nPlease contact the IT department");
                 CloseApp();
             }
@@ -156,7 +145,7 @@ namespace ExcelToPdf
             {
                 excelApp = new Application();
 
-                Console.WriteLine("\nConversion of files from .xlsx to .pdf has started");
+                Console.WriteLine("File conversion from .xlsx to .pdf has started\n");
                 for (int i = 0; i < excelList.Length; i++)
                 {
                     baseWorkbook = excelApp.Workbooks.Open(excelList[i]);
@@ -185,7 +174,7 @@ namespace ExcelToPdf
                 Marshal.ReleaseComObject(excelApp);
                 excelApp = null;
 
-                Console.WriteLine("All files converted, saved in directory:");
+                Console.WriteLine("\nAll files converted and saved in directory:");
                 Console.WriteLine(pdfList[0].Substring(0, pdfList[0].LastIndexOf(@"\") ));
             }
             catch
@@ -289,9 +278,8 @@ namespace ExcelToPdf
                 CloseApp();
             }
 
-            
-            return (path.Substring(0, ile) + @"\" + directoryName);
+            path = path.Substring(0, ile) + @"\" + directoryName;
+            return path;
         }
-
     }
 }
