@@ -33,8 +33,8 @@ namespace ExcelToPdf
         }
         static string[] ReturnPathForFilesWithExtensionFromDirectory(string directoryPath, string fileExtension)
         {
-            Queue<string> excelFilesQueue = new Queue<string>();
-            string[] excelFilesList = new string[0];
+            Queue<string> baseFilesQueue = new Queue<string>();
+            string[] baseFilesList = new string[0];
 
             if ('.' != fileExtension[0])
             {
@@ -43,8 +43,8 @@ namespace ExcelToPdf
 
             try
             {
-                excelFilesList = Directory.GetFiles(directoryPath, "*"+fileExtension);
-                if (0 == excelFilesList.Length)
+                baseFilesList = Directory.GetFiles(directoryPath, "*"+fileExtension);
+                if (0 == baseFilesList.Length)
                 {
                     Console.WriteLine($"\nNo files with extension: '{fileExtension}' in directory:\n" + directoryPath);
                     CloseApp();
@@ -59,11 +59,11 @@ namespace ExcelToPdf
             }
 
             bool temporaryFileExist = false;
-            for (int i = 0; i < excelFilesList.Length; i++)
+            for (int i = 0; i < baseFilesList.Length; i++)
             {
-                if ('~' != excelFilesList[i].Substring(excelFilesList[i].LastIndexOf(@"\")+1 )[0])
+                if ('~' != baseFilesList[i].Substring(baseFilesList[i].LastIndexOf(@"\")+1 )[0])
                 {
-                    excelFilesQueue.Enqueue(excelFilesList[i]);
+                    baseFilesQueue.Enqueue(baseFilesList[i]);
                 }
                 else
                 {
@@ -73,29 +73,48 @@ namespace ExcelToPdf
 
             if (temporaryFileExist)
             {
-                return excelFilesQueue.ToArray();
+                return baseFilesQueue.ToArray();
             }
             else
             {
-                return excelFilesList;
+                return baseFilesList;
             }
         }
-        static string[] PreparePathForFilesInNewDirectory(string[] excelList, string newDirectoryPath, string newFileExtension)
+        static string[] PreparePathForFilesInNewDirectory(string[] baseList, string newDirectoryPath)
+        {
+            string[] newList = new string[baseList.Length];
+            try
+            {
+                string fileExtension = baseList[0].Substring(baseList[0].LastIndexOf(@"."));
+                for (int i = 0; i < baseList.Length; i++)
+                {
+                    newList[i] = newDirectoryPath + baseList[i].Substring(baseList[i].LastIndexOf(@"\"));
+                }
+            }
+            catch
+            {
+                Console.WriteLine("\nPlease contact the IT department");
+                CloseApp();
+            }
+
+            return newList;
+        }
+        static string[] PreparePathForFilesInNewDirectory(string[] baseList, string newDirectoryPath, string newFileExtension)
         {
             if ('.' != newFileExtension[0])
             {
                 newFileExtension = '.' + newFileExtension;
             }
 
-            string[] pdfList = new string[excelList.Length];
+            string[] newList = new string[baseList.Length];
             try
             {
-                string fileExtension = excelList[0].Substring(excelList[0].LastIndexOf(@"."));
-                for (int i = 0; i < excelList.Length; i++)
+                string fileExtension = baseList[0].Substring(baseList[0].LastIndexOf(@"."));
+                for (int i = 0; i < baseList.Length; i++)
                 {
-                    pdfList[i] = newDirectoryPath +  
-                    excelList[i]
-                    .Substring(excelList[i].LastIndexOf(@"\"))
+                    newList[i] = newDirectoryPath +  
+                    baseList[i]
+                    .Substring(baseList[i].LastIndexOf(@"\"))
                     .Replace(fileExtension, newFileExtension);
                 }
             }
@@ -105,7 +124,7 @@ namespace ExcelToPdf
                 CloseApp();
             }
 
-            return pdfList;
+            return newList;
         }
         static void CreateNewDirectory(string newDirectoryPath)
         {
