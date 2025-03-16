@@ -3,7 +3,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+
 
 //NuGet
 using Microsoft.Office.Interop.Excel;
@@ -11,62 +14,18 @@ using Microsoft.Office.Interop.Excel;
 namespace ExcelToPdf
 {
     internal class Program
-    {
-
-        static void Test_ExcelToPdf()
-        {
-            string excelFile = "C:\\Users\\plradbad\\source\\repos\\Xniba\\ExcelToPdf\\ExcelToPdf\\Files\\ExcelFiles\\CA001 - ReplacementFile.xlsx";
-            string pfdFile = "C:\\Users\\plradbad\\source\\repos\\Xniba\\ExcelToPdf\\ExcelToPdf\\Files\\PdfFiles\\CA001 - ReplacementFile.pdf";
-
-
-            Application excelApp = new Application();
-            Workbook workbook_1;
-            Workbook workbook_2;
-            Worksheet worksheet;
-
-            // 1.1 Open workbook from file path
-            workbook_1 = excelApp.Workbooks.Open(excelFile);
-
-            // 1.2. Open from workbook one worksheet, thats one with we want to save 
-            worksheet = (Worksheet)workbook_1.Sheets[2];
-
-            // 1.3. Create second workboook from instance of excel
-            workbook_2 = excelApp.Workbooks.Add();
-
-            // 1.4. Copy worksheets from first workbook to secound wborkbook in first worksheets (wb2.Sheets[1])
-            worksheet.Copy(workbook_2.Sheets[1]);
-
-            // 1.5. Save new workbook as a PDF file
-            workbook_2.ExportAsFixedFormat(XlFixedFormatType.xlTypePDF, pfdFile);
-
-            // 1.6. Close instance
-            workbook_1.Close(0);
-            workbook_2.Close(0);
-
-            // 1.7. Info:
-
-            Console.WriteLine("\n" + "All files converted, saved in directory:");
-            Console.WriteLine("lokalizacja pliku");
-
-            // 1.8. Close 
-            excelApp.Quit();
-
-            return;
-        }
+    { 
         static void Main(string[] args)
         {
-
-            Test_ExcelToPdf();
-            return;
             ////Parameters////
             string directoryPathFiles = GetPathToDirectory("Files");
-            string directoryPathExcel = directoryPathFiles + @"\ExcelFiles";
-            string newDirectoryPathPdf = directoryPathFiles + @"\PdfFiles";
+            string baseDirectoryPath = directoryPathFiles + @"\BaseFiles";
+            string newDirectoryPath = directoryPathFiles + @"\NewFiles";
  
-            CreateNewDirectory(newDirectoryPathPdf);
+            CreateNewDirectory(newDirectoryPath);
 
-            string[] excelList = ReadNameOfExcelFiles(directoryPathExcel);
-            string[] pdfList = PreparePathForFilesToNewDirectoryWithChangedExtension(excelList, newDirectoryPathPdf, ".xlsx", ".pdf");
+            string[] excelList = ReturnPathForFilesWithExtensionFromDirectory(baseDirectoryPath, ".xlsx");
+            string[] pdfList = PreparePathForFilesInNewDirectory(excelList, newDirectoryPath, ".pdf");
 
             ExcelToPdf(excelList, pdfList);
 
@@ -75,68 +34,85 @@ namespace ExcelToPdf
 
             return;
         }
-        static string[] ReadNameOfExcelFiles(string directoryPath)
+        static string[] ReturnPathForFilesWithExtensionFromDirectory(string directoryPath, string fileExtension)
         {
-            string[] excelNamesList = new string[0];
+            Queue<string> excelFilesQueue = new Queue<string>();
+            string[] excelFilesList = null;
+
+
+            if ('.' != fileExtension[0])
+            {
+                fileExtension = '.' + fileExtension;
+            }
+
             try
             {
-                excelNamesList = Directory.GetFiles(directoryPath, "*.xlsx");
+                Console.WriteLine("\ntest");
+                Console.WriteLine(directoryPath);
+                Console.WriteLine(fileExtension);
+                Console.WriteLine("test\n");
+
+                excelFilesList = Directory.GetFiles(directoryPath, fileExtension);
+                if (0 == excelFilesList.Length)
+                {
+                    Console.WriteLine($"\nNo files with extension: '{fileExtension}' in directory:\n" + directoryPath);
+                    CloseApp();
+                }
             }
-            catch 
-            { 
+            catch
+            {
+                Debug.WriteLine("ReadPathOfBaseFiles => Directory.GetFiles");
+
+                Console.WriteLine("\nPlease contact the IT department");
                 CloseApp();
             }
 
-            Queue<string> excelNamesQueue = new Queue<string>();
-            for (int i = 0; i < excelNamesList.Length; i++)
-            { 
-                if (excelNamesList[i][0] != '~')
+            bool temporaryFileExist = false;
+            for (int i = 0; i < excelFilesList.Length; i++)
+            {
+                if ('~' != excelFilesList[i].Substring(excelFilesList[i].LastIndexOf(@"\")+1 )[0])
                 {
-                    excelNamesQueue.Enqueue(excelNamesList[i]); 
+                    Console.WriteLine(excelFilesList[i]);
+                    excelFilesQueue.Enqueue(excelFilesList[i]);
+                }
+                else
+                {
+                    temporaryFileExist = true;
                 }
             }
 
-            return excelNamesQueue.ToArray();
+            if (temporaryFileExist)
+            {
+                return excelFilesQueue.ToArray();
+            }
+            else
+            {
+                return excelFilesList;
+            }
         }
-        static string[] PreparePathForFilesToNewDirecotryFromExcelFilesToPdfFiles(string[] excelList, string newDirectoryPath)
+        static string[] PreparePathForFilesInNewDirectory(string[] excelList, string newDirectoryPath, string newFileExtension)
         {
+
             string[] pdfList = new string[excelList.Length];
 
             try
             {
+                string fileExtension = excelList[0].Substring(excelList[0].LastIndexOf(@".") + 1);
+                //string fileExtension = excelList[0].Substring(excelList[0].LastIndexOf(@".")+1);
+                Console.WriteLine(fileExtension);
                 for (int i = 0; i < excelList.Length; i++)
                 {
                     pdfList[i] = newDirectoryPath +  
                     excelList[i]
                     .Substring(excelList[i].LastIndexOf(@"\"))
-                    .Replace(".xlsx", ".pdf");
+                    .Replace(fileExtension, newFileExtension);
                     
                 }
             }
             catch
             {
-                CloseApp();
-            }
 
-            return pdfList;
-        }
-        static string[] PreparePathForFilesToNewDirectoryWithChangedExtension(string[] excelList, string newDirectoryPath, string orginalExtension, string newExtension)
-        {
-            string[] pdfList = new string[excelList.Length];
-
-            try
-            {
-                for (int i = 0; i < excelList.Length; i++)
-                {
-                    pdfList[i] = newDirectoryPath +
-                    excelList[i]
-                    .Substring(excelList[i].LastIndexOf(@"\"))
-                    .Replace(orginalExtension, newExtension);
-
-                }
-            }
-            catch
-            {
+                Console.WriteLine("\nPlease contact the IT department");
                 CloseApp();
             }
 
@@ -160,104 +136,161 @@ namespace ExcelToPdf
             {
                 Debug.WriteLine("Catch in CreateNewDirectory -> UnauthorizedAccessException");
 
-                Console.WriteLine("No permition to delete directory:\n" + newDirectoryPath);
+                Console.WriteLine($"Close all files from directory or check permissions");
+                Console.WriteLine("Can't delete directory:\n" + newDirectoryPath);
                 CloseApp();
             }
             catch
             {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("Can't delete or create new directory");
-                Console.WriteLine($"Close all files from directory:\n" + newDirectoryPath);
-                Console.ResetColor();
-
+                Console.WriteLine("\nPlease contact the IT department");
                 CloseApp();
             }
         }
         static void ExcelToPdf(string[] excelList, string[] pdfList)
         {
-            int amountOfFiles = excelList.Length;
-            Console.WriteLine($"Amount found files: {amountOfFiles}");
+            Application excelApp = null;
+            Workbook baseWorkbook = null, newWorkbook = null;
+            Worksheet worksheet = null;
 
-            Application excelApp = new Application();
-            Workbook workbook_1;
-            Workbook workbook_2;
-            Worksheet worksheet;
-
-            Console.WriteLine("\nConverting files in progres"+ "\n");
-            // 1. Create new pdf from excel
-            for (int i = 0; i < amountOfFiles; i++)
+            try
             {
-                // 1.1 Open workbook from file path
-                workbook_1 = excelApp.Workbooks.Open(excelList[i]);
+                excelApp = new Application();
 
-                // 1.2. Open from workbook one worksheet, thats one with we want to save 
-                worksheet = (Worksheet)workbook_1.Sheets[2];
+                Console.WriteLine("\nConversion of files from .xlsx to .pdf has started");
+                for (int i = 0; i < excelList.Length; i++)
+                {
+                    baseWorkbook = excelApp.Workbooks.Open(excelList[i]);
+                    worksheet = baseWorkbook.Sheets[2];
 
-                // 1.3. Create second workboook from instance of excel
-                workbook_2 = excelApp.Workbooks.Add();
+                    newWorkbook = excelApp.Workbooks.Add();
+                    worksheet.Copy(newWorkbook.Sheets[1]);
+                    newWorkbook.ExportAsFixedFormat(XlFixedFormatType.xlTypePDF, pdfList[i]);
 
-                // 1.4. Copy worksheets from first workbook to secound wborkbook in first worksheets (wb2.Sheets[1])
-                worksheet.Copy(workbook_2.Sheets[1]);
 
-                // 1.5. Save new workbook as a PDF file
-                workbook_2.ExportAsFixedFormat(XlFixedFormatType.xlTypePDF, pdfList[i]);
+                    baseWorkbook.Close(false);
+                    Marshal.ReleaseComObject(baseWorkbook);
+                    baseWorkbook = null;
 
-                // 1.6. Close instance
-                workbook_1.Close(0);
-                workbook_2.Close(0);
+                    newWorkbook.Close(false);
+                    Marshal.ReleaseComObject(newWorkbook);
+                    newWorkbook = null;
+                    
+                    Marshal.ReleaseComObject(worksheet);
+                    worksheet = null;
 
-                // 1.7. Info:
-                Console.WriteLine("File {0} saved: {1}", i + 1, pdfList[i].Substring(pdfList[i].LastIndexOf(@"\") + 1, 6));
+                    Console.WriteLine("File {0} saved: {1}", (i + 1), pdfList[i].Substring(pdfList[i].LastIndexOf(@"\")+1) );
+                }
+
+                excelApp.Quit();
+                Marshal.ReleaseComObject(excelApp);
+                excelApp = null;
+
+                Console.WriteLine("All files converted, saved in directory:");
+                Console.WriteLine(pdfList[0].Substring(0, pdfList[0].LastIndexOf(@"\") ));
             }
-
-            // 1.7. Info:
-
-            Console.WriteLine("\n" + "All files converted, saved in directory:");
-            Console.WriteLine(pdfList[0].Substring(0, pdfList[0].LastIndexOf(@"\")));
-
-            // 1.8. Close 
-            excelApp.Quit();
+            catch
+            {
+                Console.WriteLine("\nPlease contact the IT department");
+                CloseApp();
+            }
+            finally
+            {
+                if (null != excelApp) 
+                { 
+                    Marshal.ReleaseComObject(excelApp);
+                    excelApp = null;
+                }
+                if (null != baseWorkbook)
+                {
+                    Marshal.ReleaseComObject(baseWorkbook);
+                    baseWorkbook = null;
+                }
+                if (null != newWorkbook) 
+                { 
+                    Marshal.ReleaseComObject(newWorkbook);
+                    newWorkbook = null;
+                }
+                if (null != worksheet) 
+                { 
+                    Marshal.ReleaseComObject(worksheet);
+                    worksheet = null;
+                }
+            }
 
             return;
         }
         static void CloseApp([CallerMemberName] string methodName = "")
         {
-            Debug.WriteLine($"!!!There was a problem in method: {methodName}");
+            Debug.WriteLine($"\n!!!There was a problem in method: {methodName}\n");
 
             Console.WriteLine("\nPress Enter to close app");
             Console.ReadKey();
+
             Environment.Exit(0);
         }
         static string GetPathToDirectory()
         {
-            string path = new DirectoryInfo(".").FullName;
-            int ile = path.IndexOf("bin") - 1;
-            if (ile < 0)
+            string path = null;
+            try
             {
-                Console.WriteLine("Director not fount, please contact with your IT department");
+                path = new DirectoryInfo(".").FullName;
+            }
+            catch
+            {
+                Console.WriteLine("\nPlease contact the IT department");
                 CloseApp();
             }
-            else
+
+            int ile = -1;
+            try
             {
-                path = path.Substring(0, ile);
+                ile = path.IndexOf("bin") - 1;
+                if (ile < 0)
+                {
+                    Console.WriteLine("\nPlease contact the IT department");
+                    CloseApp();
+                }
             }
-            return path;
+            catch
+            {
+                Console.WriteLine("\nPlease contact the IT department");
+                CloseApp();
+            }
+
+
+            return path.Substring(0, ile);
         }
         static string GetPathToDirectory(string directoryName)
         {
-            string path = new DirectoryInfo(".").FullName;
-            int ile = path.IndexOf("bin") - 1;
-            if (ile < 0)
+            string path = null;
+            try
             {
-                Console.WriteLine("Director not fount, please contact with your IT department");
+                path = new DirectoryInfo(".").FullName;
+            }
+            catch
+            {
+                Console.WriteLine("\nPlease contact the IT department");
                 CloseApp();
             }
-            else
+
+            int ile = -1;
+            try
             {
-                path = path.Substring(0, ile);
-                path = path + @"\" + directoryName;
+                ile = path.IndexOf("bin") - 1;
+                if (ile < 0)
+                {
+                    Console.WriteLine("\nPlease contact the IT department");
+                    CloseApp();
+                }
             }
-            return path;
+            catch
+            {
+                Console.WriteLine("\nPlease contact the IT department");
+                CloseApp();
+            }
+
+            
+            return (path.Substring(0, ile) + @"\" + directoryName);
         }
 
     }
